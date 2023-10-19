@@ -1,0 +1,38 @@
+.paginate_button .active {
+    font-weight: bold;
+    color: black;
+}
+
+.comment_userId {
+    display: inline;
+    margin-right: 10px;
+    font-weight: 600;
+    font-size: large;
+}
+
+.comment_date{
+    font-size: small;
+    color: gray;
+}
+
+.comment_content {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.indent_size_1{
+    margin-left: 20px;
+}
+.indent_size_2{
+    margin-left: 40px;
+}
+.indent_size_3{
+    margin-left: 60px;
+}
+.indent_size_4{
+    margin-left: 80px;
+}
+
+.comment_content_delete {
+    color: gray;
+}

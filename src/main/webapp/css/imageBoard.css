@@ -1,0 +1,21 @@
+#preview img {
+    width: 100px;
+    height: 100px;
+}
+
+#preview p {
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.preview-box {
+    border: 1px solid;
+    padding: 5px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+}
+
+.thumbnail img {
+    width: 150px;
+    height: 150px;
+}@charset "EUC-KR";
