@@ -3,6 +3,23 @@
 ## 의도
 Servlet&JSP로 구현해본적이 없기에 간단한 게시판 형태의 구현을 목표로 진행.
 
+## 프로젝트 기능
+* 계층형 게시판
+	* 계층형 구조로 텍스트만으로 구성된 게시판
+	* 게시글 검색, 페이징, 작성, 수정, 삭제, 답글, 댓글 기능 구현
+	* 계층형 구조이므로 게시글 삭제 시 해당 게시글 하위 계층에 위치하는 게시글도 같이 삭제되도록 구현
+* 이미지 게시판
+	* 이미지와 텍스트를 같이 업로드 할 수 있는 게시판
+	* 최대 5장의 이미지 파일 업로드 가능
+	* 검색, 페이징, 작성, 수정, 삭제, 댓글 기능 구현
+	* 여러 방법으로 수행해보기 위해 삭제는 관리자만 가능하도록 구현
+* 댓글
+	* 계층형 구조로 구현
+	* 계층형 게시판과 마찬가지로 삭제 시 하위 계층에 위치하는 모든 댓글도 같이 삭제
+	* 댓글의 경우 delete 처리를 하는것이 아닌 update로 status값을 변경해 '삭제된 댓글입니다'라는 문구를 출력하도록 구현
+	* status 값에 다른 content의 내용은 Front에서 parsing하는 것이 아닌 Query로 처리.
+ 
+
 ## 개발 환경
 * IDE - Eclipse
 * Java 8
@@ -18,21 +35,250 @@ Servlet&JSP로 구현해본적이 없기에 간단한 게시판 형태의 구현
 		* taglibs-standard-spec-1.2.5
 
 
+
 ## 기능
-* 계층형 게시판
-	* 계층형 구조로 텍스트만으로 구성된 게시판
-	* 게시글 검색, 페이징, 작성, 수정, 삭제, 답글, 댓글 기능 구현
-	* 계층형 구조이므로 게시글 삭제 시 해당 게시글 하위 계층에 위치하는 게시글도 같이 삭제되도록 구현
-* 이미지 게시판
-	* 이미지와 텍스트를 같이 업로드 할 수 있는 게시판
-	* 최대 5장의 이미지 파일 업로드 가능
-	* 검색, 페이징, 작성, 수정, 삭제, 댓글 기능 구현
-	* 여러 방법으로 수행해보기 위해 삭제는 관리자만 가능하도록 구현
-* 댓글
-	* 계층형 구조로 구현
-	* 계층형 게시판과 마찬가지로 삭제 시 하위 계층에 위치하는 모든 댓글도 같이 삭제
-	* 댓글의 경우 delete 처리를 하는것이 아닌 update로 status값을 변경해 '삭제된 댓글입니다'라는 문구를 출력하도록 구현
-	* status 값에 다른 content의 내용은 Front에서 parsing하는 것이 아닌 Query로 처리.
+
+### Servlet 구조
+
+처음에는 Sevlet에서 doGet, doPost, doPut등 메소드들을 오버라이드해서 처리하고자 했으나 그렇게 처리하는 경우 기능별로 Servlet을 분리해서 나누는 것이 좋을지,   
+아니면 Spring에서 Controller처럼 하나의 큰 틀에서 기능을 메소드별로 나누는 것이 좋을지에 대한 정보가 부족해 확신이 없었습니다.   
+그래서 여러 방법으로 Sevlet 구조를 설계해 봤습니다.
+
+CommentServlet과 MemberServlet은 doGet, doPost 메소드들을 일체 사용하지 않고, service 메소드에서 요청 uri에 따라 직접 작성한 메소드를 호출하는 형태로 처리합니다.
+```java
+@WebServlet(urlPatterns = "/comment/*")
+public class CommentServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+	private CommentService comemntService = new CommentServiceImpl();
+
+	@Override
+	protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String uri = req.getRequestURI();
+		String path = uri.substring(uri.lastIndexOf("/"));
+
+		if(path.equals("/boardComment"))
+			doGetBoardComment(req, resp);
+		else if(path.equals("/imageComment"))
+			doGetImageBoardComment(req, resp);
+		else if(path.equals("/commentInsert"))
+			doPostInsertComment(req, resp);
+		else if(path.equals("/commentDelete"))
+			doDeleteComment(req, resp);
+		else if(path.equals("/commentReply"))
+			doPostReplyComment(req, resp);
+	}
+
+	protected void doPostReplyComment(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String result = commentService.commentReply(req);
+
+		PrintWriter out = resp.getWriter();
+		out.print(result);
+	}
+
+	protected void doGetBoardComment(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		CommentDTO dto = commentService.getBoardComment(req);
+
+		resp.setContentType("application/json")
+		resp.setCharacterEncoding("UTF-8");
+
+		String gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").create().toJson(dto);
+
+		resp.getWriter().write(gson);
+	}
+
+	...
+}
+```
+
+계층형 게시판인 HierarchicalBoardServlet은 Comment와 Member같이 service 메소드를 통해 요청을 먼저 받게 되지만 모든 메소드를 직접 작성하는 것이 아닌   
+doGet, doPost 메소드를 오버라이드해 처리하면서 추가적으로 필요한 기능에 대한 메소드를 직접 작성해 호출하도록 처리했습니다.
+```java
+@WebServlet(urlPatterns = "/board/*")
+public class HierarchicalBoardServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+	private HierarchicalBoardService boardService = new HierarchicalBoardServiceImpl();
+
+	@Override
+	protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String uri = req.getRequestURI();
+		String path = uri.substring(uri.lastIndexOf("/"));
+
+		if(path.equals("/boardList"))
+			doGet(req, resp);
+		else if(path.equals("/boardDetail"))
+			doGetDetail(req, resp);
+		else if(path.equals("/boardModifyProc"))
+			doPut(req, resp);
+		else if(path.equals("/boardDelete"))
+			doDelete(req, resp);
+		else if(path.equals("/boardInsertProc"))
+			doPost(req, resp);
+		else if(path.equals("/boardInsert"))
+			doGetInsert(req, resp);
+		else if(path.equals("/boardModify"))
+			doGetModify(req, resp);
+		else if(path.equals("/boardReply"))
+			doGetReply(req, resp);
+		else if(path.equals("/boardReplyProc"))
+			doPostReply(req, resp);
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		RequestDispatcher dispatcher;
+
+		List<HierarchicalBoard> resultList = boardService.boardList(req, resp);
+		
+		if(resultList == null){
+			req.setAttribute("list", null);
+			dispatcher = req.getRequestDispatcher(ViewPathProperties.accessErrorViewPath);
+		}else {
+			req.setAttribute("list", resultList);
+			req.setAttribute("pageMaker", boardService.setPageDTO(req));
+			dispatcher = req.getRequestDispatcher(ViewPathProperties.hierarchicalViewPath + "boardList.jsp");
+		}
+		dispatcher.forward(req, resp);
+	}
+
+	protected void doPostReply(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		RequestDispatcher dispatcher;
+
+		long result = boardService.boardReply(req, resp);
+
+		if(result == 0){
+			dispatcher = req.getRequestDispatcher(ViewPathProperties.accessErrorViewPath);
+			dispatcher.forward(req, resp);
+		}else
+			resp.sendRedirect("/board/boardDetail?boardNo=" + result);
+	}
+
+	...
+}
+```
+
+마지막으로 이미지 게시판은 기능별로 Servlet을 모두 분리하고 service 메소드를 일체 사용하지 않은 구조로 doGet, doPost, doPut 등의 메소드들을 오버라이드해 구현하는 방법으로 처리했습니다.
+
+|Servlet|Method|
+|---|---|
+|ImageAttachServlet|doGet - 이미지 수정 페이지에서 해당 게시글의 이미지 데이터를 반환|
+|ImageBoardDeleteServlet|doDelete - 게시글 삭제 처리|
+|ImageBoardDetailServlet|doGet - 이미지 게시판 상세페이지 데이터를 담아 호출|
+|ImageBoardInsertServlet|doGet - 이미지 게시판 작성 페이지 호출 <br/> doPost - 이미지 게시판 작성 요청 처리|
+|ImageBoardModifyServlet|doGet - 이미지 게시판 수정 페이지 데이터를 담아 호출 <br/> doPut - 이미지 게시판 수정 요청 처리|
+|ImageBoardServlet|doGet - 이미지 게시판 리스트(메인) 페이지 요청|
+|ImageServlet|doGet - 이미지 출력을 위한 처리|
+
+Servlet을 이렇게 분리함으로써 Servlet이 어떤 기능을 담당하고 있는지, 이 Servlet에서는 어떤 Http Method 요청을 처리하고 있는지 좀 더 명확하고 빠르게 알 수 있다는 장점이 있었습니다.
+
+아쉽게도 여러가지 방법으로 Servlet을 분리해봤지만 아직은 어떤 방법이 더 좋을지에 대한 확신이 서지 않았습니다.   
+작은 프로젝트들을 개인 프로젝트로 수행하고 리팩토링하고 있다보니 감을 잡는데 어려움이 있지만,   
+이 경험으로 느낄 수 있었던 것은 다른 Servlet들 처럼 큰 틀의 Servlet을 하나 만들어두고 사용하는 것 보다는 좀 더 분리하는 것이 좋다는 생각이 들었습니다.   
+
+대신 이미지 게시판처럼 완전한 분리를 통한 설계보다는 좀 더 Servlet의 네이밍을 명확하게 하고 관심사별로 나눌 수 있도록 설계하는 방법이 좋지 않을까 라는 생각을 할 수 있었습니다.
+
+### JDBC
+
+일정한 Connection을 반환 받기 위해 JDBCTemplate 클래스를 생성하고 Connection을 반환하도록 했으며,   
+close, rollback, commit을 처리하는 메소드와 ResultSet, Statement의 close를 처리하는 메소드를 작성해 두었습니다.
+
+
+```java
+public class JDBCTemplate {
+	
+	public static Connection getConnection() {
+		try {
+			Class.forName("com.mysql.cj.jdbc.Driver");
+		}catch(ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		String url = "jdbc:mysql://localhost:3306/boardproject?serverTimezone=UTC&characterEncoding=UTF-8&autoReconnection=true";
+		String id = "root";
+		String pw = "1234";
+		
+		Connection con = null;
+		
+		try {
+			//뭔지 알아보기.
+			con = DriverManager.getConnection(url, id, pw);
+			
+			con.setAutoCommit(false);
+		}catch(SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return con;
+	}
+	
+	//연결 상태라면 true, 닫혀있다면 false 리턴.
+	public static boolean isConnection(Connection con) {
+		boolean valid = true;
+		
+		try {
+			// con이 null이거나 con이 close 상태라면
+			if(con == null || con.isClosed()) {
+				valid = false;
+			}
+		}catch(SQLException e) {
+			valid = true;
+			e.printStackTrace();
+		}
+		
+		return valid;
+	}
+	
+	//연결 상태인지 아닌지 확인 후 연결 상태라면 close
+	public static void close(Connection con) {
+		if(isConnection(con)) {
+			try {
+				con.close();
+			}catch(SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	//statement가 null이 아닐 때 close
+	public static void close(Statement stmt) {
+		if(stmt != null) {
+			try {
+				stmt.close();
+			}catch(SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	//rs가 null이 아닐 때 close
+	public static void close(ResultSet rs) {
+		if(rs != null) {
+			try {
+				rs.close();
+			}catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	//연결 상태라면 commit
+	public static void commit(Connection con) {
+		if(isConnection(con)) {
+			try {
+				con.commit();
+			}catch(SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+```
+
+### 계층형 게시판
+
+* 테이블 구조
+	
+
 
 
 ## 프로젝트 특징과 이유, 느낀점

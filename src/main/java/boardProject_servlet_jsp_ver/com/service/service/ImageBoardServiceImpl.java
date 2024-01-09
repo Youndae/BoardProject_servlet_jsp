@@ -300,7 +300,7 @@ public class ImageBoardServiceImpl implements ImageBoardService{
 			return -1;
 		}
 		
-		dto = new ImageBoardModifyDTO.ImageBoardModifyGetDTOBuilder()
+		dto = new ImageBoardModifyDTO.ImageBoardModifyDTOBuilder()
 				.imageNo(Long.parseLong(imageNo))
 				.imageTitle(title)
 				.imageContent(content)
@@ -311,10 +311,11 @@ public class ImageBoardServiceImpl implements ImageBoardService{
 		
 		if(result == 0)
 			return 0;
+		else {
+			deleteFiles(deleteFileList);
+			return result;
+		}
 		
-		deleteFiles(deleteFileList);
-		
-		return result;
 	}
 	
 	public void deleteFiles(List<String> deleteFileList) {

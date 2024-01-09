@@ -36,7 +36,7 @@ public class ImageBoardModifyDTO {
 		
 	}
 	
-	private ImageBoardModifyDTO(ImageBoardModifyGetDTOBuilder builder) {
+	private ImageBoardModifyDTO(ImageBoardModifyDTOBuilder builder) {
 		super();
 		this.imageNo = builder.imageNo;
 		this.imageTitle = builder.imageTitle;
@@ -44,7 +44,7 @@ public class ImageBoardModifyDTO {
 		this.userId = builder.userId;
 	}
 	
-	public static class ImageBoardModifyGetDTOBuilder{
+	public static class ImageBoardModifyDTOBuilder{
 		private long imageNo;
 		
 		private String imageTitle;
@@ -53,22 +53,22 @@ public class ImageBoardModifyDTO {
 		
 		private String userId;
 		
-		public ImageBoardModifyGetDTOBuilder imageNo(long imageNo) {
+		public ImageBoardModifyDTOBuilder imageNo(long imageNo) {
 			this.imageNo = imageNo;
 			return this;
 		}
 		
-		public ImageBoardModifyGetDTOBuilder imageTitle(String imageTitle) {
+		public ImageBoardModifyDTOBuilder imageTitle(String imageTitle) {
 			this.imageTitle = imageTitle;
 			return this;
 		}
 		
-		public ImageBoardModifyGetDTOBuilder imageContent(String imageContent) {
+		public ImageBoardModifyDTOBuilder imageContent(String imageContent) {
 			this.imageContent = imageContent;
 			return this;
 		}
 		
-		public ImageBoardModifyGetDTOBuilder userId(String userId) {
+		public ImageBoardModifyDTOBuilder userId(String userId) {
 			this.userId = userId;
 			return this;
 		}

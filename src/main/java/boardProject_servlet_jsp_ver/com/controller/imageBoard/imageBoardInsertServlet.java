@@ -1,16 +1,9 @@
 package boardProject_servlet_jsp_ver.com.controller.imageBoard;
 
-import java.io.File;
+
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -20,11 +13,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-
-import boardProject_servlet_jsp_ver.com.domain.ResultProperties;
 import boardProject_servlet_jsp_ver.com.domain.ViewPathProperties;
 import boardProject_servlet_jsp_ver.com.service.service.ImageBoardService;
 import boardProject_servlet_jsp_ver.com.service.service.ImageBoardServiceImpl;
