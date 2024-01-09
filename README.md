@@ -40,8 +40,7 @@ Servlet&JSP로 구현해본적이 없기에 간단한 게시판 형태의 구현
 
 ### Servlet 구조
 
-처음에는 Sevlet에서 doGet, doPost, doPut등 메소드들을 오버라이드해서 처리하고자 했으나 그렇게 처리하는 경우 기능별로 Servlet을 분리해서 나누는 것이 좋을지,   
-아니면 Spring에서 Controller처럼 하나의 큰 틀에서 기능을 메소드별로 나누는 것이 좋을지에 대한 정보가 부족해 확신이 없었습니다.   
+처음에는 Sevlet에서 doGet, doPost, doPut등 메소드들을 오버라이드해서 처리하고자 했으나 그렇게 처리하는 경우 기능별로 Servlet을 분리해서 나누는 것이 좋을지, 아니면 Spring에서 Controller처럼 하나의 큰 틀에서 기능을 메소드별로 나누는 것이 좋을지에 대한 정보가 부족해 확신이 없었습니다.   
 그래서 여러 방법으로 Sevlet 구조를 설계해 봤습니다.
 
 CommentServlet과 MemberServlet은 doGet, doPost 메소드들을 일체 사용하지 않고, service 메소드에서 요청 uri에 따라 직접 작성한 메소드를 호출하는 형태로 처리합니다.
@@ -91,8 +90,7 @@ public class CommentServlet extends HttpServlet {
 }
 ```
 
-계층형 게시판인 HierarchicalBoardServlet은 Comment와 Member같이 service 메소드를 통해 요청을 먼저 받게 되지만 모든 메소드를 직접 작성하는 것이 아닌   
-doGet, doPost 메소드를 오버라이드해 처리하면서 추가적으로 필요한 기능에 대한 메소드를 직접 작성해 호출하도록 처리했습니다.
+계층형 게시판인 HierarchicalBoardServlet은 Comment와 Member같이 service 메소드를 통해 요청을 먼저 받게 되지만 모든 메소드를 직접 작성하는 것이 아닌 doGet, doPost 메소드를 오버라이드해 처리하면서 추가적으로 필요한 기능에 대한 메소드를 직접 작성해 호출하도록 처리했습니다.
 ```java
 @WebServlet(urlPatterns = "/board/*")
 public class HierarchicalBoardServlet extends HttpServlet {
@@ -277,8 +275,430 @@ public class JDBCTemplate {
 ### 계층형 게시판
 
 * 테이블 구조
-	
+  <img src="./README_IMG/boardProject_table.jpg">
+  <br/>
+  <br/>
+  데이터베이스는 기존 BoardProject의 데이터베이스를 그대로 사용했습니다.
+  GroupNo로 계층형 구조의 그룹화를 처리하고, UpperNo에는 최상위 글부터 자신까지의 경로에 있는 글 번호, Indent로 계층을 표현했습니다.
+  이 구조를 통해 GroupNo 내림차순, UpperNo 오름차순으로 정렬해 간단하게 계층형 구조를 처리할 수 있었습니다.
 
+  <br/>
+  <br/>
+  
+* 게시판 리스트 조회   
+  게시판에는 페이징 기능이 적용되어 있어 20개씩 조회하며, 검색 기능이 존재합니다.
+  검색 타입으로는 제목, 내용, 작성자, 제목 + 내용 이렇게 4가지의 타입으로 검색할 수 있습니다.
+  이 조건을 처리하기 위해 타 버전에서 동적쿼리를 수행했던 것 처럼 JDBC를 통한 처리 역시 동일하게 처리할 수 있도록 했습니다.
+  <br/>
+  <br/>
+
+  ```java
+  public class HierarchicalBoardDaoImpl implements HierarchicalBoardDao {
+
+	private Connection con = null;
+	
+	@Override
+	public List<HierarchicalBoard> boardList(Criteria cri) {
+		
+		con = JDBCTemplate.getConnection();
+		
+		String sql = "SELECT * "
+				+ "FROM hierarchicalBoard";
+		
+		if(cri.getSearchType() != null)
+			sql = setSearchSQL(cri.getSearchType(), cri.getKeyword(), sql);
+		
+		
+		sql = sql.concat(" ORDER BY boardGroupNo desc, boardUpperNo asc "
+							+ "limit " + ((cri.getPageNum() - 1) * cri.getBoardAmount()) + ", " + cri.getBoardAmount());
+		
+		List<HierarchicalBoard> boardList = new ArrayList<HierarchicalBoard>();
+		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		
+		try {
+			pstmt = con.prepareStatement(sql);
+			rs = pstmt.executeQuery(sql);
+			
+			while(rs.next()) {
+				
+				boardList.add(new HierarchicalBoard.HierarchicalBoardBuilder()
+						.boardNo(rs.getLong("boardNo"))
+						.boardTitle(rs.getString("boardTitle"))
+						.userId(rs.getString("userId"))
+						.boardContent(rs.getString("boardContent"))
+						.boardDate(rs.getDate("boardDate"))
+						.boardGroupNo(rs.getLong("boardGroupNo"))
+						.boardIndnet(rs.getInt("boardIndent"))
+						.boardUpperNo(rs.getString("boardupperNo"))
+						.build()
+						);
+			}
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+			return null;
+		}finally {
+			JDBCTemplate.close(con);
+			JDBCTemplate.close(pstmt);
+			JDBCTemplate.close(rs);
+		}
+		
+		
+		return boardList;
+	}
+
+  	public String setSearchSQL(String searchType, String keyword, String sql) {
+		
+		if(searchType != null) {
+			switch(searchType) {
+			case "t" :
+				sql = sql.concat(" WHERE boardTitle LIKE '%" + keyword + "%'");
+				break;
+			case "c" :
+				sql = sql.concat(" WHERE boardContent LIKE '%" + keyword + "%'");
+				break;
+			case "w" :
+				sql = sql.concat(" WHERE userId LIKE '%" + keyword + "%'");
+				break;
+			case "tc" :
+				sql = sql.concat(" WHERE boardTitle LIKE '%" + keyword + "%' or boardContent LIKE '%" + keyword + "%'");
+				break;
+			}
+		}
+		
+		return sql;
+	}
+
+  ...
+  }
+  ```
+  <br/>
+  <br/>
+  DAO에서 검색 타입에 대한 조건문을 통해 검색 요청이라면 setSearchSQL 메소드를 호출해 WHERE문을 추가할 수 있도록 했습니다.
+
+  <br/>
+  <br/>
+  
+* 게시글 삭제
+  <br/>
+  계층형에서 게시글을 삭제하는 경우 하위 게시글까지 삭제하게 됩니다.
+  원글의 경우 같은 GroupNo를 가진 모든 데이터를 삭제하도록 하는 방법으로 간단하게 처리할 수 있지만, 중간에 위치한 답글을 삭제하는 경우에는
+  해당 글의 하위글만 찾아 삭제하도록 처리할 필요가 있었습니다.
+
+  <br/>
+  <br/>
+
+  ```java
+  //HierarchicalBoardService
+  @Override
+  public String boardDelete(HttpServletRequest request, HttpServletResponse response) {
+	
+  	long boardNo = Long.parseLong(request.getParameter("boardNo"));
+  	HttpSession session = request.getSession();
+  	String uid = (String) session.getAttribute("id");
+	
+	if(!boardDAO.checkWriter(boardNo).equals(uid))
+		return null;
+	
+	//삭제요청 게시글의 no, gno, upper, indent를 요청
+	HierarchicalBoardDeleteDTO deleteDTO = boardDAO.checkDeleteNo(boardNo);
+	
+	//삭제 요청 게시글의 indent가 0이라면 boardNo를 gno로 넘겨 해당 그룹 전체 삭제
+	if(deleteDTO.getBoardIndent() == 0)
+		boardDAO.deleteBoardGroup(boardNo);
+	else { //indent가 0이 아닌 경우 답글이기 때문에
+		//같은 그룹의 모든 데이터를 요청하고
+		List<HierarchicalBoardDeleteDTO> deleteGroupDTO = boardDAO.getDeleteGroup(deleteDTO.getBoardGroupNo());
+		
+		//그룹 내에서 upperNo에 boardNo가 들어있는 리스트를 만들어서
+		List<Long> deleteNoList = new ArrayList<Long>();
+		getDeleteData(deleteGroupDTO, boardNo, deleteDTO.getBoardIndent(), deleteNoList);
+		
+		//list를 삭제 요청
+		boardDAO.boardDelete(deleteNoList);
+		
+	}
+	
+	return "success";
+  }
+
+  public void getDeleteData(List<HierarchicalBoardDeleteDTO> deleteGroupDTO, long boardNo
+							, int boardIndent, List<Long> deleteNoList) {
+	
+	for(int i = 0; i < deleteGroupDTO.size(); i++) {
+		String upperNo = deleteGroupDTO.get(i).getBoardUpperNo();
+		String[] upperArr = upperNo.split(",");
+		
+		if(upperArr.length > boardIndent && boardNo == Long.parseLong(upperArr[boardIndent])) 
+			deleteNoList.add(deleteGroupDTO.get(i).getBoardNo());
+		
+	}		
+	
+  }
+  ```
+  <br/>
+  삭제 데이터를 찾는 방법으로는 UpperNo의 값들을 split()으로 배열화 해준 뒤 삭제하고자 하는 데이터의 Indent 위치에 글 번호가 존재한다면,
+  삭제해야하는 데이터라고 판단할 수 있습니다.
+  이 조건에 해당하는 데이터의 글 번호들을 리스트화 한 뒤, 삭제요청에 리스트를 담아 전달하도록 했습니다.
+
+  <br/>
+  
+  ```java
+  @Override
+  public String boardDelete(List<Long> deleteNoList) {
+	String sql = "DELETE FROM hierarchicalBoard WHERE boardNo IN (%s)";
+	String inSql = String.join(",", Collections.nCopies(deleteNoList.size(), "?"));
+	sql = String.format(sql, inSql);
+	con = JDBCTemplate.getConnection();
+	PreparedStatement pstmt = null;
+	
+	try {
+		pstmt = con.prepareStatement(sql);
+		for(int i = 1; i <= deleteNoList.size(); i++) 
+			pstmt.setLong(i, deleteNoList.get(i - 1));
+		
+		pstmt.executeUpdate();
+		
+		JDBCTemplate.commit(con);
+		
+	}catch(SQLException e) {
+		e.printStackTrace();
+		
+		JDBCTemplate.rollback(con);
+		
+		return null;
+	}finally {
+		JDBCTemplate.close(con);
+		JDBCTemplate.close(pstmt);
+	}
+	
+	
+	return "success";
+	
+  }
+  ```
+  
+  <br/>
+  <br/>
+
+  DAO에서는 List로 받은 데이터를 처리하기 위해 IN 절을 통해 처리했습니다.
+  리스트의 사이즈는 매번 동일하지 않기 때문에 달라지는 사이즈를 감안해 Collections.nCopies를 통해 동적으로 처리할 수 있도록 했습니다.
+
+  <br/>
+  <br/>
+
+### 이미지 게시판(수정)
+
+<br/>
+<img src="./README_IMG/image_Sequence.jpg">
+<br/>
+Spring에서 파일 처리는 Multipart와 String의 리스트로 받아 쉽게 처리할 수 있었지만 Servlet에서는 사용할 수 없었기에 다른 방법이 필요했습니다.   
+문제 해결을 위해 여러 방법을 찾아보게 되었고, 전통적인 자바에서 파일 처리 방식과 DiskFileItemFactory, FileItem을 통한 처리 방식을 찾을 수 있었습니다.   
+그 중에서 DisFileItemFactory와 FileItem을 통한 처리 방법을 택해 문제를 해결할 수 있었습니다.
+<br/>
+  
+```java
+@Override
+public long modify(HttpServletRequest request) {
+	
+	String title = null;
+	String content = null;
+	String imageNo = null;
+	List<String> deleteFileList = new ArrayList<String>();
+	List<ImageDataDTO> imageDTOList = new ArrayList<ImageDataDTO>();
+	ImageBoardModifyDTO dto = new ImageBoardModifyDTO();
+	HttpSession session = request.getSession();
+	String uid = (String) session.getAttribute("id");
+	
+	int step = 0;
+	
+	
+	try {
+		DiskFileItemFactory diskFactory = new DiskFileItemFactory();
+		diskFactory.setSizeThreshold(4096);
+		diskFactory.setRepository(new File(FileProperties.TEMP_PATH));
+		
+		ServletFileUpload upload = new ServletFileUpload(diskFactory);
+		
+		upload.setSizeMax(FileProperties.FILE_SIZE);
+		
+		List<FileItem> items = upload.parseRequest(request);
+		
+		Iterator<FileItem> iter = items.iterator();
+		
+		while(iter.hasNext()) {
+			FileItem item = (FileItem) iter.next();
+			
+			if(item.isFormField()) {
+				String fieldName = item.getFieldName();
+				
+				if(fieldName.equals("imageTitle"))
+					title = item.getString("UTF-8");
+				else if(fieldName.equals("imageContent"))
+					content = item.getString("UTF-8");
+				else if(fieldName.equals("imageNo")) {
+					imageNo = item.getString("UTF-8");
+					step = imageBoardDAO.getStep(Long.parseLong(imageNo)) + 1;
+					
+					if(step == 1)
+						throw new Exception();
+				}else if(fieldName.equals("deleteFiles"))
+					deleteFileList.add(item.getString("UTF-8"));
+				
+			}else {
+				if(item.getSize() > 0) 
+					saveFile(item, imageDTOList, step);
+			}
+		}
+		
+	}catch(Exception e) {
+		e.printStackTrace();
+		return -1;
+	}
+	
+	dto = new ImageBoardModifyDTO.ImageBoardModifyDTOBuilder()
+			.imageNo(Long.parseLong(imageNo))
+			.imageTitle(title)
+			.imageContent(content)
+			.userId(uid)
+			.build();
+	
+	long result = imageBoardDAO.modify(dto, imageDTOList, deleteFileList);
+	
+	if(result == 0)
+		return 0;
+	else {
+		deleteFiles(deleteFileList);
+		return result;
+	}
+	
+}
+
+public void saveFile(FileItem item, List<ImageDataDTO> imageDTOList, int step) {
+	
+	try {
+		String name = item.getFieldName();
+		String fileName = item.getName();
+		
+		StringBuffer sb = new StringBuffer();
+		String saveName = sb.append(new SimpleDateFormat("yyyyMMddHHmmss").format(System.currentTimeMillis()))
+				.append(UUID.randomUUID())
+				.append(fileName.substring(fileName.lastIndexOf("."))).toString();
+		
+		Path filePath = Paths.get(FileProperties.FILE_PATH + "/" + saveName);
+		File uploadFile = filePath.toFile();
+		item.write(uploadFile);
+		
+		imageDTOList.add(new ImageDataDTO.ImageDataDTOBuilder()
+				.imageName(saveName)
+				.oldName(fileName)
+				.imageStep(step)
+				.build());
+		step++;
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+}
+
+public void deleteFiles(List<String> deleteFileList) {
+	String filePath = FileProperties.FILE_PATH;
+	
+	if(deleteFileList.size() != 0) {
+		for(int i = 0; i < deleteFileList.size(); i++) {
+			String deleteFileName = deleteFileList.get(i);
+			File file = new File(filePath + deleteFileName);
+			if(file.exists())
+				file.delete();
+		}
+	}
+		
+}
+```
+
+DiskFileItemFactory와 FileItem을 통해 게시글 정보와 파일을 꺼낼 수 있었고, 저장 및 삭제 데이터에 대해서는 리스트화 한 뒤 DAO에 요청하게 됩니다.   
+
+```java
+@Override
+public long modify(ImageBoardModifyDTO dto, List<ImageDataDTO> imageDTOList, List<String> deleteFileList) {
+	con = JDBCTemplate.getConnection();
+	PreparedStatement pstmt = null;
+	
+	String modifySQL = "UPDATE imageBoard SET "
+			+ "imageTitle=?"
+			+ ", imageContent=? "
+			+ "WHERE imageNo=?";
+	
+	String imageSQL = "INSERT INTO imageData("
+			+ "imageName"
+			+ ", imageNo"
+			+ ", oldName"
+			+ ", imageStep) "
+			+ "VALUES ";
+	String imageValSQL = String.join(",", Collections.nCopies(imageDTOList.size(), "(?, ?, ?, ?)"));
+	
+	imageSQL = imageSQL.concat(imageValSQL);
+	
+	
+	String deleteImageDataSQL = "DELETE FROM imageData "
+			+ "WHERE imageName IN (%s)";
+	
+	String delteValSQL = String.join(",", Collections.nCopies(deleteFileList.size(), "?"));
+	
+	deleteImageDataSQL = String.format(deleteImageDataSQL, delteValSQL);
+	
+	int columnCount = 1;
+	
+	try {
+		pstmt = con.prepareStatement(modifySQL);
+		pstmt.setString(1, dto.getImageTitle());
+		pstmt.setString(2, dto.getImageContent());
+		pstmt.setLong(3, dto.getImageNo());
+		
+		pstmt.executeUpdate();
+		
+		pstmt = con.prepareStatement(imageSQL);
+		for(int i = 1; i <= imageDTOList.size(); i++) {
+			pstmt.setString(columnCount++, imageDTOList.get(i - 1).getImageName());
+			pstmt.setLong(columnCount++, dto.getImageNo());
+			pstmt.setString(columnCount++, imageDTOList.get(i -1).getOldName());
+			pstmt.setInt(columnCount++, imageDTOList.get(i - 1).getImageStep());
+		}
+		
+		pstmt.executeUpdate();
+		
+		pstmt = con.prepareStatement(deleteImageDataSQL);
+		for(int i = 1; i <= deleteFileList.size(); i++)
+			pstmt.setString(i, deleteFileList.get(i - 1));
+		
+		pstmt.executeUpdate();
+		
+		JDBCTemplate.commit(con);
+		
+	}catch(SQLException e) {
+		e.printStackTrace();
+		JDBCTemplate.rollback(con);
+		
+		return 0;
+	}finally {
+		JDBCTemplate.close(con);
+		JDBCTemplate.close(pstmt);
+	}
+	
+	
+	return dto.getImageNo();
+}
+```
+리스트를 전달해 처리하는만큼 여기서도 동적 쿼리로 수행할 수 있어야 했습니다.   
+계층형 게시판의 Delete와는 다른 점으로 이미지 데이터의 삽입 과정을 IN 절로 처리할 수 없었기 때문에 동일하게 String.join을 통해 values 구문 부분을 만들어주도록 했습니다.   
+그리고 값에 대해서는 PreparedStatement.set 을 통해 담아주도록 했고, 여러건을 처리하기 위해 반복문을 통해 처리했습니다.
+
+처리 과정 중에 게시글 정보, 이미지 데이터 추가, 이미지 데이터 삭제 중 하나라도 문제가 발생한다면 전체적인 롤백이 필요하다고 판단해 하나의 메소드에서 처리하도록 했고,   
+문제가 발생하는 경우 catch문을 통해 전체 롤백이 수행되도록 했습니다.
+
+만약 롤백이 되는 경우 저장된 파일이 삭제되었다면 문제가 발생하기 때문에 비즈니스 로직에서 파일 삭제 메소드 호출은 데이터 처리가 완료된 후에 수행하도록 했습니다.
 
 
 ## 프로젝트 특징과 이유, 느낀점
