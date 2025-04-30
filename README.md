@@ -1,55 +1,129 @@
-# BoardProejct Servlet&JSP ver.
+# BoardProject_Servlet&JSP
 
-## 의도
-Servlet&JSP로 구현해본적이 없기에 간단한 게시판 형태의 구현을 목표로 진행.
+# 프로젝트 요약
+> 계층형을 표현하는 텍스트 기반의 게시판과 텍스트와 이미지 업로드가 가능한 게시판으로 구성된 CRUD 중심의 프로젝트입니다.   
+> 다양한 기능 구현보다 기본에 충실한 프로젝트입니다.   
+> 기본적인 개념에 대한 프로젝트인만큼 새로운 기술이나 언어, 환경에 대한 기본 CRUD 테스트에 주로 사용하고 있어 다양한 버전이 존재합니다.   
+> 해당 프로젝트는 Servlet & JSP 버전이며, JSP, REST-API, Kotlin 버전이 추가로 존재합니다.   
+> Servlet & JSP를 통해 JDBC Template의 사용과 구조 개념을 이해하기 위해 진행한 프로젝트입니다.
+> 버전이 다르더라도 기능에는 차이가 거의 없으며 각 환경에 대한 구조의 차이 정도만 있습니다.
 
-## 프로젝트 기능
-* 계층형 게시판
-	* 계층형 구조로 텍스트만으로 구성된 게시판
-	* 게시글 검색, 페이징, 작성, 수정, 삭제, 답글, 댓글 기능 구현
-	* 계층형 구조이므로 게시글 삭제 시 해당 게시글 하위 계층에 위치하는 게시글도 같이 삭제되도록 구현
-* 이미지 게시판
-	* 이미지와 텍스트를 같이 업로드 할 수 있는 게시판
-	* 최대 5장의 이미지 파일 업로드 가능
-	* 검색, 페이징, 작성, 수정, 삭제, 댓글 기능 구현
-	* 여러 방법으로 수행해보기 위해 삭제는 관리자만 가능하도록 구현
-* 댓글
-	* 계층형 구조로 구현
-	* 계층형 게시판과 마찬가지로 삭제 시 하위 계층에 위치하는 모든 댓글도 같이 삭제
-	* 댓글의 경우 delete 처리를 하는것이 아닌 update로 status값을 변경해 '삭제된 댓글입니다'라는 문구를 출력하도록 구현
-	* status 값에 다른 content의 내용은 Front에서 parsing하는 것이 아닌 Query로 처리.
- 
+### 타 버전 GitHub
 
-## 개발 환경
-* IDE - Eclipse
-* Java 8
-* MySQL 8.0
-* JDBC
-* BootStrap
-* Library
-	* gson-2.8.9
-	* commons-fileupload-1.5
-	* commons-io-2.11.0
-	* jstl lib
-		* taglibs-standard-impl-1.2.5
-		* taglibs-standard-spec-1.2.5
+- JSP 기본 버전
+	- https://github.com/Youndae/BoardProject
+- REST-API 서버 및 FrontEnd Server
+	- https://github.com/Youndae/rest-api-project
+- React Client
+	- https://github.com/Youndae/boardProject_client_react
+- Kotlin
+	- https://github.com/Youndae/boardProject_kt
 
+<br/>
 
+# 목차
 
-## 기능
+1. [프로젝트 구조](#프로젝트-구조)
+2. [개발 환경](#개발-환경)
+3. [ERD](#ERD)
+4. [페이지별 기능 상세](#페이지별-기능-상세)
+5. [기능 및 개선 내역](#기능-및-개선-내역)
 
-### Servlet 구조
+<br/>
 
-처음에는 Sevlet에서 doGet, doPost, doPut등 메소드들을 오버라이드해서 처리하고자 했으나 그렇게 처리하는 경우 기능별로 Servlet을 분리해서 나누는 것이 좋을지, 아니면 Spring에서 Controller처럼 하나의 큰 틀에서 기능을 메소드별로 나누는 것이 좋을지에 대한 정보가 부족해 확신이 없었습니다.   
-그래서 여러 방법으로 Sevlet 구조를 설계해 봤습니다.
+# 프로젝트 구조
+<img src="./README_IMG/project_structure.jpg"/>
 
-CommentServlet과 MemberServlet은 doGet, doPost 메소드들을 일체 사용하지 않고, service 메소드에서 요청 uri에 따라 직접 작성한 메소드를 호출하는 형태로 처리합니다.
+Servlet은 Controller 하위에 위치하고 있으며, 다양한 구조의 Servlet을 구현했습니다.   
+Servlet 구조에 대한 상세한 내용은 기능 및 개선 내역 부분에 정리했습니다.   
+Servlet & JSP 특성 상 Maven 또는 Gradle 같은 빌드 툴을 사용하지 않았기에 필요한 라이브러리는 webapp/WEB-INF/lib 하위에 jar 파일을 직접 받아 배치했습니다.
+
+<br />
+
+# 개발 환경
+
+|Category| Tech Stack|
+|---|---|
+|Backend| - JDK 8 <br/> - JDBC Template|
+|Frontend| - JSP <br/> - JQuery <br/> - Ajax <br/> - BootStrap|
+|Database| - MySQL|
+| Environment| - Eclipse <br/> - GitHub|
+|Library| - gson-2.8.9 <br/> - commons-fileupload-1.5 <br/> - commons-io-2.11.0 <br/> - jstl library ( taglibs-standard-impl-1.2.5, taglibs-standard-spec-1.2.5 ) |
+
+<br/>
+
+# ERD
+
+<img src="./README_IMG/boardProject_erd.jpg"/>
+
+<br/>
+
+# 페이지별 기능 상세
+
+<details>
+    <summary><strong>계층형 게시판</strong></summary>
+
+- 계층형 목록
+- 검색 ( 제목, 내용, 작성자, 제목 + 내용 기반 )
+- Pagination
+- 게시글 작성
+- 게시글 상세 정보
+	- 작성자인 경우 수정, 삭제( 삭제하는 경우 하위 계층 게시글 삭제 )
+	- 답글 작성
+	- 댓글 작성 ( 대댓글 작성 가능 )
+</details>
+
+<br/>
+
+<details>
+    <summary><strong>이미지 게시판</strong></summary>
+
+- 목록
+- 게시글 작성
+	- 텍스트 및 이미지 업로드 ( 최대 5장 제한 )
+- 검색 ( 제목, 내용, 작성자, 제목 + 내용 기반 )
+- Pagination
+- 게시글 상세 정보
+	- 작성자인 경우 수정, 삭제
+	- 댓글 작성 ( 대댓글 작성 가능 )
+</details>
+
+<br/>
+
+<details>
+    <summary><strong>로그인</strong></summary>
+
+- 로그인
+- 회원가입
+</details>
+
+<br/>
+
+# 기능 및 개선 내역
+
+1. [Servlet 설계](#Servlet-설계)
+2. [JDBC Template](#JDBC-Template)
+3. [이미지 파일 처리](#이미지-파일-처리)
+
+<br/>
+
+### Servlet 설계
+
+<br/>
+
+프로젝트를 진행하며 Servlet 구조에 대해 고민이 많았습니다.   
+Servlet을 배울 때 기본적으로 doGet, doPost, doPut 메소드들을 오버라이드해서 처리하는 방법으로 배웠습니다.   
+하지만 하나의 Servlet에서 여러번의 get 요청이 발생할 수도 있기 때문에 이 경우 기능별로 Servlet을 분리할지, 아니면 Spring에서의 Controller 처럼 하나의 큰 틀에서 기능을 메소드별로 나눌지에 대한 고민이었습니다. 
+이 설계에 대해 고민이 많았으나 정보가 부족해 확신을 가질 수 없었고, 결과적으로는 모든 케이스에 대한 경험을 해보고자 다양한 구조로 설계하게 되었습니다.   
+
+CommentServlet과 MemberServlet은 doGet, doPost 등의 메소드들을 일체 사용하지 않고, service 메소드에서 요청 URI에 따라 직접 작성한 메소드를 호출하는 형태로 처리했습니다.
+
 ```java
 @WebServlet(urlPatterns = "/comment/*")
 public class CommentServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	private CommentService comemntService = new CommentServiceImpl();
+	private CommentService commentService = new CommentServiceImpl();
 
 	@Override
 	protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -78,7 +152,7 @@ public class CommentServlet extends HttpServlet {
 	protected void doGetBoardComment(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		CommentDTO dto = commentService.getBoardComment(req);
 
-		resp.setContentType("application/json")
+		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
 
 		String gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").create().toJson(dto);
@@ -86,11 +160,16 @@ public class CommentServlet extends HttpServlet {
 		resp.getWriter().write(gson);
 	}
 
-	...
+	//...
 }
 ```
 
-계층형 게시판인 HierarchicalBoardServlet은 Comment와 Member같이 service 메소드를 통해 요청을 먼저 받게 되지만 모든 메소드를 직접 작성하는 것이 아닌 doGet, doPost 메소드를 오버라이드해 처리하면서 추가적으로 필요한 기능에 대한 메소드를 직접 작성해 호출하도록 처리했습니다.
+이 방법은 Spring Controller 처럼 큰 틀 내에서 요청을 받는 Service 메소드 하나를 두고 분리해서 작성해 확장성이 높으며 한곳으로 요청이 집중되어 공통 로직의 처리가 용이하다는 장점이 있습니다.   
+하지만 URI 매핑이 하드코딩되는 만큼 많은 요청을 처리하는 Servlet이라면 가독성과 유지보수성이 떨어질 수 있습니다.   
+또한, 규모가 커질수록 비대해지고 복잡해진다는 단점도 존재합니다.
+
+계층형 게시판인 HierarchicalBoard의 Servlet은 Service로 요청을 받되, doGet, doPost 등의 HttpServlet 메소드를 최대한 사용하고, 중복되는 처리의 경우 메소드를 직접 작성해 호출하도록 처리했습니다.   
+
 ```java
 @WebServlet(urlPatterns = "/board/*")
 public class HierarchicalBoardServlet extends HttpServlet {
@@ -152,23 +231,14 @@ public class HierarchicalBoardServlet extends HttpServlet {
 			resp.sendRedirect("/board/boardDetail?boardNo=" + result);
 	}
 
-	...
+	//...
 }
 ```
+이 방법의 경우 역시 메소드 직접 작성 방식과 같은 장단점을 갖고 있습니다.
 
-마지막으로 이미지 게시판은 기능별로 Servlet을 모두 분리하고 service 메소드를 일체 사용하지 않은 구조로 doGet, doPost, doPut 등의 메소드들을 오버라이드해 구현하는 방법으로 처리했습니다.
-
-|Servlet|Method|
-|---|---|
-|ImageAttachServlet|doGet - 이미지 수정 페이지에서 해당 게시글의 이미지 데이터를 반환|
-|ImageBoardDeleteServlet|doDelete - 게시글 삭제 처리|
-|ImageBoardDetailServlet|doGet - 이미지 게시판 상세페이지 데이터를 담아 호출|
-|ImageBoardInsertServlet|doGet - 이미지 게시판 작성 페이지 호출 <br/> doPost - 이미지 게시판 작성 요청 처리|
-|ImageBoardModifyServlet|doGet - 이미지 게시판 수정 페이지 데이터를 담아 호출 <br/> doPut - 이미지 게시판 수정 요청 처리|
-|ImageBoardServlet|doGet - 이미지 게시판 리스트(메인) 페이지 요청|
-|ImageServlet|doGet - 이미지 출력을 위한 처리|
-
-Servlet을 이렇게 분리함으로써 Servlet이 어떤 기능을 담당하고 있는지, 이 Servlet에서는 어떤 Http Method 요청을 처리하고 있는지 좀 더 명확하고 빠르게 알 수 있다는 장점이 있었습니다.
+마지막으로 이미지 게시판인 ImageServlet의 경우 기능별로 모두 분리하고 doGet, doPost 등의 메소드들만 사용해 구현하는 방법으로 처리했습니다.   
+이 방법은 기능별로 책임이 분리되면서 유지보수가 용이하며 응집도가 높다는 장점이 있지만, 기능이 많아질수록 Servlet 파일 개수가 증가한다는 단점이 있습니다.   
+또한, 공통 로직을 매번 중복해서 구현하게 될 수 있다는 단점 또한 존재합니다.
 
 아쉽게도 여러가지 방법으로 Servlet을 분리해봤지만 아직은 어떤 방법이 더 좋을지에 대한 확신이 서지 않았습니다.   
 작은 프로젝트들을 개인 프로젝트로 수행하고 리팩토링하고 있다보니 감을 잡는데 어려움이 있지만,   
@@ -176,7 +246,9 @@ Servlet을 이렇게 분리함으로써 Servlet이 어떤 기능을 담당하고
 
 대신 이미지 게시판처럼 완전한 분리를 통한 설계보다는 좀 더 Servlet의 네이밍을 명확하게 하고 관심사별로 나눌 수 있도록 설계하는 방법이 좋지 않을까 라는 생각을 할 수 있었습니다.
 
-### JDBC
+### JDBC Template
+
+이 프로젝트에서는 데이터베이스 연동을 위해 JDBC Template을 사용했습니다.
 
 일정한 Connection을 반환 받기 위해 JDBCTemplate 클래스를 생성하고 Connection을 반환하도록 했으며,   
 close, rollback, commit을 처리하는 메소드와 ResultSet, Statement의 close를 처리하는 메소드를 작성해 두었습니다.
@@ -272,232 +344,18 @@ public class JDBCTemplate {
 	}
 ```
 
-### 계층형 게시판
-
-* 테이블 구조
-  <img src="./README_IMG/boardProject_table.jpg">
-  <br/>
-  <br/>
-  데이터베이스는 기존 BoardProject의 데이터베이스를 그대로 사용했습니다.
-  GroupNo로 계층형 구조의 그룹화를 처리하고, UpperNo에는 최상위 글부터 자신까지의 경로에 있는 글 번호, Indent로 계층을 표현했습니다.
-  이 구조를 통해 GroupNo 내림차순, UpperNo 오름차순으로 정렬해 간단하게 계층형 구조를 처리할 수 있었습니다.
-
-  <br/>
-  <br/>
-  
-* 게시판 리스트 조회   
-  게시판에는 페이징 기능이 적용되어 있어 20개씩 조회하며, 검색 기능이 존재합니다.
-  검색 타입으로는 제목, 내용, 작성자, 제목 + 내용 이렇게 4가지의 타입으로 검색할 수 있습니다.
-  이 조건을 처리하기 위해 타 버전에서 동적쿼리를 수행했던 것 처럼 JDBC를 통한 처리 역시 동일하게 처리할 수 있도록 했습니다.
-  <br/>
-  <br/>
-
-  ```java
-  public class HierarchicalBoardDaoImpl implements HierarchicalBoardDao {
-
-	private Connection con = null;
-	
-	@Override
-	public List<HierarchicalBoard> boardList(Criteria cri) {
-		
-		con = JDBCTemplate.getConnection();
-		
-		String sql = "SELECT * "
-				+ "FROM hierarchicalBoard";
-		
-		if(cri.getSearchType() != null)
-			sql = setSearchSQL(cri.getSearchType(), cri.getKeyword(), sql);
-		
-		
-		sql = sql.concat(" ORDER BY boardGroupNo desc, boardUpperNo asc "
-							+ "limit " + ((cri.getPageNum() - 1) * cri.getBoardAmount()) + ", " + cri.getBoardAmount());
-		
-		List<HierarchicalBoard> boardList = new ArrayList<HierarchicalBoard>();
-		
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			pstmt = con.prepareStatement(sql);
-			rs = pstmt.executeQuery(sql);
-			
-			while(rs.next()) {
-				
-				boardList.add(new HierarchicalBoard.HierarchicalBoardBuilder()
-						.boardNo(rs.getLong("boardNo"))
-						.boardTitle(rs.getString("boardTitle"))
-						.userId(rs.getString("userId"))
-						.boardContent(rs.getString("boardContent"))
-						.boardDate(rs.getDate("boardDate"))
-						.boardGroupNo(rs.getLong("boardGroupNo"))
-						.boardIndnet(rs.getInt("boardIndent"))
-						.boardUpperNo(rs.getString("boardupperNo"))
-						.build()
-						);
-			}
-			
-		}catch(SQLException e) {
-			e.printStackTrace();
-			return null;
-		}finally {
-			JDBCTemplate.close(con);
-			JDBCTemplate.close(pstmt);
-			JDBCTemplate.close(rs);
-		}
-		
-		
-		return boardList;
-	}
-
-  	public String setSearchSQL(String searchType, String keyword, String sql) {
-		
-		if(searchType != null) {
-			switch(searchType) {
-			case "t" :
-				sql = sql.concat(" WHERE boardTitle LIKE '%" + keyword + "%'");
-				break;
-			case "c" :
-				sql = sql.concat(" WHERE boardContent LIKE '%" + keyword + "%'");
-				break;
-			case "w" :
-				sql = sql.concat(" WHERE userId LIKE '%" + keyword + "%'");
-				break;
-			case "tc" :
-				sql = sql.concat(" WHERE boardTitle LIKE '%" + keyword + "%' or boardContent LIKE '%" + keyword + "%'");
-				break;
-			}
-		}
-		
-		return sql;
-	}
-
-  ...
-  }
-  ```
-  <br/>
-  <br/>
-  DAO에서 검색 타입에 대한 조건문을 통해 검색 요청이라면 setSearchSQL 메소드를 호출해 WHERE문을 추가할 수 있도록 했습니다.
-
-  <br/>
-  <br/>
-  
-* 게시글 삭제
-  <br/>
-  계층형에서 게시글을 삭제하는 경우 하위 게시글까지 삭제하게 됩니다.
-  원글의 경우 같은 GroupNo를 가진 모든 데이터를 삭제하도록 하는 방법으로 간단하게 처리할 수 있지만, 중간에 위치한 답글을 삭제하는 경우에는
-  해당 글의 하위글만 찾아 삭제하도록 처리할 필요가 있었습니다.
-
-  <br/>
-  <br/>
-
-  ```java
-  //HierarchicalBoardService
-  @Override
-  public String boardDelete(HttpServletRequest request, HttpServletResponse response) {
-	
-  	long boardNo = Long.parseLong(request.getParameter("boardNo"));
-  	HttpSession session = request.getSession();
-  	String uid = (String) session.getAttribute("id");
-	
-	if(!boardDAO.checkWriter(boardNo).equals(uid))
-		return null;
-	
-	//삭제요청 게시글의 no, gno, upper, indent를 요청
-	HierarchicalBoardDeleteDTO deleteDTO = boardDAO.checkDeleteNo(boardNo);
-	
-	//삭제 요청 게시글의 indent가 0이라면 boardNo를 gno로 넘겨 해당 그룹 전체 삭제
-	if(deleteDTO.getBoardIndent() == 0)
-		boardDAO.deleteBoardGroup(boardNo);
-	else { //indent가 0이 아닌 경우 답글이기 때문에
-		//같은 그룹의 모든 데이터를 요청하고
-		List<HierarchicalBoardDeleteDTO> deleteGroupDTO = boardDAO.getDeleteGroup(deleteDTO.getBoardGroupNo());
-		
-		//그룹 내에서 upperNo에 boardNo가 들어있는 리스트를 만들어서
-		List<Long> deleteNoList = new ArrayList<Long>();
-		getDeleteData(deleteGroupDTO, boardNo, deleteDTO.getBoardIndent(), deleteNoList);
-		
-		//list를 삭제 요청
-		boardDAO.boardDelete(deleteNoList);
-		
-	}
-	
-	return "success";
-  }
-
-  public void getDeleteData(List<HierarchicalBoardDeleteDTO> deleteGroupDTO, long boardNo
-							, int boardIndent, List<Long> deleteNoList) {
-	
-	for(int i = 0; i < deleteGroupDTO.size(); i++) {
-		String upperNo = deleteGroupDTO.get(i).getBoardUpperNo();
-		String[] upperArr = upperNo.split(",");
-		
-		if(upperArr.length > boardIndent && boardNo == Long.parseLong(upperArr[boardIndent])) 
-			deleteNoList.add(deleteGroupDTO.get(i).getBoardNo());
-		
-	}		
-	
-  }
-  ```
-  <br/>
-  삭제 데이터를 찾는 방법으로는 UpperNo의 값들을 split()으로 배열화 해준 뒤 삭제하고자 하는 데이터의 Indent 위치에 글 번호가 존재한다면,
-  삭제해야하는 데이터라고 판단할 수 있습니다.
-  이 조건에 해당하는 데이터의 글 번호들을 리스트화 한 뒤, 삭제요청에 리스트를 담아 전달하도록 했습니다.
-
-  <br/>
-  
-  ```java
-  @Override
-  public String boardDelete(List<Long> deleteNoList) {
-	String sql = "DELETE FROM hierarchicalBoard WHERE boardNo IN (%s)";
-	String inSql = String.join(",", Collections.nCopies(deleteNoList.size(), "?"));
-	sql = String.format(sql, inSql);
-	con = JDBCTemplate.getConnection();
-	PreparedStatement pstmt = null;
-	
-	try {
-		pstmt = con.prepareStatement(sql);
-		for(int i = 1; i <= deleteNoList.size(); i++) 
-			pstmt.setLong(i, deleteNoList.get(i - 1));
-		
-		pstmt.executeUpdate();
-		
-		JDBCTemplate.commit(con);
-		
-	}catch(SQLException e) {
-		e.printStackTrace();
-		
-		JDBCTemplate.rollback(con);
-		
-		return null;
-	}finally {
-		JDBCTemplate.close(con);
-		JDBCTemplate.close(pstmt);
-	}
-	
-	
-	return "success";
-	
-  }
-  ```
-  
-  <br/>
-  <br/>
-
-  DAO에서는 List로 받은 데이터를 처리하기 위해 IN 절을 통해 처리했습니다.
-  리스트의 사이즈는 매번 동일하지 않기 때문에 달라지는 사이즈를 감안해 Collections.nCopies를 통해 동적으로 처리할 수 있도록 했습니다.
-
-  <br/>
-  <br/>
-
-### 이미지 게시판(수정)
+DAOImpl에서는 getConnection()을 통해 데이터베이스 연결을 확보하고, 처리 완료 후 close()를 호출하여 연결을 종료했습니다.
 
 <br/>
-<img src="./README_IMG/image_Sequence.jpg">
+
+
+### 이미지 파일 처리
+
 <br/>
-Spring에서 파일 처리는 Multipart와 String의 리스트로 받아 쉽게 처리할 수 있었지만 Servlet에서는 사용할 수 없었기에 다른 방법이 필요했습니다.   
-문제 해결을 위해 여러 방법을 찾아보게 되었고, 전통적인 자바에서 파일 처리 방식과 DiskFileItemFactory, FileItem을 통한 처리 방식을 찾을 수 있었습니다.   
-그 중에서 DisFileItemFactory와 FileItem을 통한 처리 방법을 택해 문제를 해결할 수 있었습니다.
-<br/>
+
+Spring에서 파일 처리는 Multipart로 받아 쉽게 처리할 수 있었지만 Servlet에서는 사용할 수 없었기에 다른 방법이 필요했습니다.   
+문제 해결을 위해 여러 방법을 찾아보게 되었고, 자바에서 파일 처리 방식과 DiskFileItemFactory, FileItem을 통한 처리 방식을 찾을 수 있었습니다.   
+그 중에서 DiskFileItemFactory와 FileItem을 통한 처리 방법을 택해 문제를 해결할 수 있었습니다.
   
 ```java
 @Override
